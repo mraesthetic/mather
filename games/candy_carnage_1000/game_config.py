@@ -83,9 +83,12 @@ class GameConfig(Config):
             "super_scatter": [self.super_scatter_symbol],
             "bomb": ["M"],
         }
+        self.super_bomb_show_chance = 0.5
+        self.super_bomb_win_ratio = 0.5
+
         self.bomb_settings = {
             "regular": {
-                "appearance_chance": 0.15,
+                "appearance_chance": 0.25,
                 "count_weights": {1: 92, 2: 7, 3: 1},
                 "mult_weights": {
                     2: 320,
