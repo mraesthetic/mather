@@ -31,8 +31,8 @@ class GameExecutables(GameCalculations):
         set_total_event(self)
 
     def update_freespin_amount(self, scatter_key: str = "scatter"):
-        """Start every feature with 10 spins regardless of scatter count."""
-        self.tot_fs = 10
+        """Start every feature with a fixed number of spins."""
+        self.tot_fs = self.config.initial_free_spins
         basegame_trigger = self.gametype == self.config.basegame_type
         fs_trigger_event(
             self,

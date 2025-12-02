@@ -63,6 +63,9 @@ class GameConfig(Config):
         self.paytable = self.convert_range_table(pay_group)
 
         self.include_padding = True
+        self.initial_free_spins = 10
+        self.retrigger_spins = 5
+        self.max_free_spins = 20
         self.scatter_symbol = "S"
         self.super_scatter_symbol = "BS"
         self.special_symbols = {
@@ -73,38 +76,36 @@ class GameConfig(Config):
         }
         self.bomb_settings = {
             "regular": {
-                "appearance_chance": 0.4,
-                "count_weights": {1: 85, 2: 13, 3: 2},
+                "appearance_chance": 0.25,
+                "count_weights": {1: 90, 2: 9, 3: 1},
                 "mult_weights": {
-                    2: 340,
-                    3: 275,
-                    4: 210,
-                    5: 170,
-                    6: 120,
-                    8: 90,
-                    10: 55,
+                    2: 320,
+                    3: 280,
+                    4: 230,
+                    5: 190,
+                    6: 140,
+                    8: 100,
+                    10: 60,
                     12: 40,
-                    15: 30,
-                    20: 20,
-                    25: 10,
-                    50: 4,
-                    100: 1,
-                    250: 0.2,
-                    500: 0.05,
-                    1000: 0.01,
+                    15: 25,
+                    20: 12,
+                    25: 6,
+                    40: 3,
+                    50: 1,
                 },
             },
             "super": {
-                "appearance_chance": 0.6,
-                "count_weights": {1: 60, 2: 30, 3: 10},
+                "appearance_chance": 0.45,
+                "count_weights": {1: 70, 2: 25, 3: 5},
                 "mult_weights": {
-                    20: 260,
-                    25: 200,
-                    50: 90,
-                    100: 25,
-                    250: 8,
-                    500: 2,
-                    1000: 0.5,
+                    20: 340,
+                    25: 240,
+                    40: 80,
+                    50: 60,
+                    75: 30,
+                    100: 20,
+                    150: 8,
+                    250: 2,
                 },
             },
         }
