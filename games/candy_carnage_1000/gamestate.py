@@ -57,6 +57,8 @@ class GameState(GameStateOverride):
 
     def run_freespin(self):
         self.reset_fs_spin()
+        self.retrigs_awarded = 0
+        self.retrig_cap = self.config.sample_retrigger_cap()
         self.tot_fs = self.config.initial_free_spins
         while self.fs < self.tot_fs:
             if self.wincap_triggered:
@@ -81,7 +83,11 @@ class GameState(GameStateOverride):
             if self.wincap_triggered:
                 break
 
-            if self.check_fs_condition():
+            if (
+                self.check_fs_condition()
+                and self.retrigs_awarded < self.retrig_cap
+            ):
+                self.retrigs_awarded += 1
                 self.tot_fs = min(
                     self.tot_fs + self.config.retrigger_spins,
                     self.config.max_free_spins,

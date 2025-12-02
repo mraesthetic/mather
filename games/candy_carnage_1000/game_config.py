@@ -1,4 +1,5 @@
 import os
+import random
 from src.config.config import Config
 from src.config.distributions import Distribution
 from src.config.betmode import BetMode
@@ -66,6 +67,14 @@ class GameConfig(Config):
         self.initial_free_spins = 10
         self.retrigger_spins = 5
         self.max_free_spins = 20
+        # Probability thresholds for retrigger caps (CDF order)
+        self.retrigger_distribution = [
+            (0, 0.6899),
+            (1, 0.8899),
+            (2, 0.9899),
+            (3, 0.9999),
+            (4, 1.0),
+        ]
         self.scatter_symbol = "S"
         self.super_scatter_symbol = "BS"
         self.special_symbols = {
@@ -76,36 +85,35 @@ class GameConfig(Config):
         }
         self.bomb_settings = {
             "regular": {
-                "appearance_chance": 0.25,
-                "count_weights": {1: 90, 2: 9, 3: 1},
+                "appearance_chance": 0.15,
+                "count_weights": {1: 92, 2: 7, 3: 1},
                 "mult_weights": {
-                    2: 320,
-                    3: 280,
-                    4: 230,
-                    5: 190,
-                    6: 140,
-                    8: 100,
-                    10: 60,
+                    2: 360,
+                    3: 320,
+                    4: 260,
+                    5: 200,
+                    6: 150,
+                    8: 110,
+                    10: 70,
                     12: 40,
-                    15: 25,
-                    20: 12,
-                    25: 6,
-                    40: 3,
-                    50: 1,
+                    15: 20,
+                    20: 8,
+                    25: 3,
+                    30: 2,
                 },
             },
             "super": {
-                "appearance_chance": 0.45,
-                "count_weights": {1: 70, 2: 25, 3: 5},
+                "appearance_chance": 0.35,
+                "count_weights": {1: 75, 2: 20, 3: 5},
                 "mult_weights": {
-                    20: 340,
-                    25: 240,
+                    20: 360,
+                    25: 250,
+                    30: 120,
                     40: 80,
-                    50: 60,
-                    75: 30,
-                    100: 20,
-                    150: 8,
-                    250: 2,
+                    50: 55,
+                    60: 40,
+                    75: 25,
+                    100: 15,
                 },
             },
         }
@@ -170,6 +178,13 @@ class GameConfig(Config):
             self._build_regular_buy_mode(),
             self._build_super_buy_mode(),
         ]
+
+    def sample_retrigger_cap(self) -> int:
+        roll = random.random()
+        for cap, threshold in self.retrigger_distribution:
+            if roll <= threshold:
+                return cap
+        return 0
 
     def _build_main_mode(
         self,
