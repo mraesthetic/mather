@@ -38,6 +38,7 @@ class GameState(GameStateOverride):
                         self.apply_scatter_payout(total_scatter)
                     self.win_manager.update_gametype_wins(self.gametype)
                     self.current_feature_type = feature_type
+                    self.bonus_type = feature_type
                     self.run_freespin_from_base()
                 else:
                     self.pending_feature_type = None
@@ -126,7 +127,7 @@ class GameState(GameStateOverride):
         while attempts < max_attempts:
             attempts += 1
             self.create_board_reelstrips()
-            self._remove_existing_scatter_symbols()
+            self._reset_board_to_filler()
             if not self._assign_buy_entry_symbols(target_scatter, target_super):
                 continue
             self.get_special_symbols_on_board()
@@ -157,16 +158,13 @@ class GameState(GameStateOverride):
 
         return True
 
-    def _remove_existing_scatter_symbols(self) -> None:
-        """Replace all existing scatter / super-scatter symbols with filler symbols."""
-        filler_name = self._get_filler_symbol_name()
+    def _reset_board_to_filler(self) -> None:
+        """Clamp the entry board to a neutral low-symbol layout before placing scatters."""
+        filler_pool = self._get_buy_filler_cycle()
         for reel in range(self.config.num_reels):
             for row in range(self.config.num_rows[reel]):
-                if self.board[reel][row].name in (
-                    self.config.scatter_symbol,
-                    self.config.super_scatter_symbol,
-                ):
-                    self.board[reel][row] = self.create_symbol(filler_name)
+                filler_name = random.choice(filler_pool)
+                self.board[reel][row] = self.create_symbol(filler_name)
         self.get_special_symbols_on_board()
 
     def _board_matches_buy_pattern(self, target_scatter: int, target_super: int) -> bool:
@@ -181,29 +179,47 @@ class GameState(GameStateOverride):
         return all(pos["reel"] not in super_reels for pos in scatter_positions)
 
     def _get_filler_symbol_name(self) -> str:
-        """Return a non-special fallback symbol for replacing forced tiles."""
-        if not hasattr(self, "_buy_filler_symbol"):
-            for (_, symbol) in self.config.paytable.keys():
-                if symbol not in (self.config.scatter_symbol, self.config.super_scatter_symbol):
-                    self._buy_filler_symbol = symbol
-                    break
-            else:
-                self._buy_filler_symbol = next(iter(self.config.paytable.keys()))[1]
-        return self._buy_filler_symbol
+        """Return the primary filler symbol (first entry in the low-symbol cycle)."""
+        return self._get_buy_filler_cycle()[0]
+
+    def _get_buy_filler_cycle(self):
+        """Build a deterministic cycle of low symbols for clamped boards."""
+        if not hasattr(self, "_buy_filler_cycle"):
+            low_symbols = sorted(
+                {
+                    symbol
+                    for (_, symbol) in self.config.paytable.keys()
+                    if symbol.startswith("L") and symbol not in (self.config.scatter_symbol, self.config.super_scatter_symbol)
+                }
+            )
+            if not low_symbols:
+                low_symbols = [
+                    symbol
+                    for (_, symbol) in self.config.paytable.keys()
+                    if symbol not in (self.config.scatter_symbol, self.config.super_scatter_symbol)
+                ]
+            if not low_symbols:
+                low_symbols = ["L1"]
+            self._buy_filler_cycle = low_symbols
+        return self._buy_filler_cycle
 
     def _is_valid_scatter_board(self) -> bool:
-        """Ensure BS priority rules are respected on natural boards."""
+        """Ensure scatter placement rules are respected on natural boards."""
         scatter_positions = self.special_syms_on_board.get("scatter", [])
         super_positions = self.special_syms_on_board.get("super_scatter", [])
 
         if len(super_positions) > 1:
             return False
 
+        scatter_reels = set()
+        for pos in scatter_positions:
+            reel = pos["reel"]
+            if reel in scatter_reels:
+                return False
+            scatter_reels.add(reel)
+
         if not super_positions:
             return True
 
         super_reel = super_positions[0]["reel"]
-        for pos in scatter_positions:
-            if pos["reel"] == super_reel:
-                return False
-        return True
+        return all(pos["reel"] != super_reel for pos in scatter_positions)

@@ -12,6 +12,8 @@ def json_ready_sym(symbol: object, special_attributes: list = None):
     for key, val in attrs.items():
         if key in special_attributes and symbol.get_attribute(key) != False:
             print_sym[key] = val
+    if hasattr(symbol, "multiplier"):
+        print_sym["multiplier"] = symbol.get_attribute("multiplier")
     return print_sym
 
 

@@ -1,5 +1,5 @@
 from game_executables import *
-from src.events.events import update_freespin_event, update_global_mult_event
+from src.events.events import update_freespin_event
 from src.calculations.statistics import get_random_outcome
 
 
@@ -16,6 +16,8 @@ class GameStateOverride(GameExecutables):
         self.tumble_win = 0
         self.entry_was_buy = False
         self.pending_feature_type = None
+        self.current_feature_type = None
+        self.bonus_type = None
 
     def reset_fs_spin(self):
         super().reset_fs_spin()
