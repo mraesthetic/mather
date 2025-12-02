@@ -88,7 +88,7 @@ class GameConfig(Config):
 
         self.bomb_settings = {
             "regular": {
-                "appearance_chance": 0.25,
+                "appearance_chance": 0.35,
                 "count_weights": {1: 92, 2: 7, 3: 1},
                 "mult_weights": {
                     2: 320,
@@ -110,7 +110,7 @@ class GameConfig(Config):
                 },
             },
             "super": {
-                "appearance_chance": 0.35,
+                "appearance_chance": 0.6,
                 "count_weights": {1: 75, 2: 20, 3: 5},
                 "mult_weights": {
                     20: 260,
