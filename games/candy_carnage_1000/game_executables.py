@@ -98,12 +98,11 @@ class GameExecutables(GameCalculations):
         feature_type = getattr(self, "current_feature_type", "regular")
         bomb_settings = self.config.bomb_settings.get(feature_type, self.config.bomb_settings["regular"])
 
-        show_bombs = True
-        apply_multiplier = True
         if feature_type == "super":
             if random.random() >= self.config.super_bomb_show_chance:
                 return
-            apply_multiplier = (base_win > 0) and (random.random() < self.config.super_bomb_win_ratio)
+            if base_win > 0 and random.random() >= self.config.super_bomb_win_ratio:
+                return
         else:
             if base_win <= 0:
                 return
@@ -118,7 +117,7 @@ class GameExecutables(GameCalculations):
         bomb_multipliers = [self._get_bomb_multiplier(bomb_settings["mult_weights"]) for _ in bomb_positions]
         total_bomb_mult = sum(bomb_multipliers)
 
-        if apply_multiplier and base_win > 0:
+        if base_win > 0:
             bombed_win = base_win * total_bomb_mult
             prior_spin_total = self.win_manager.spin_win - base_win
             self.win_manager.set_spin_win(prior_spin_total + bombed_win)
