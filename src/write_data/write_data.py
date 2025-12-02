@@ -266,6 +266,10 @@ def write_json(gamestate, filename: str):
     json_objects = [json.dumps(item) for item in gamestate.library.values()]
     combined_data = "\n".join(json_objects) + "\n"
 
+    parent_dir = os.path.dirname(filename)
+    if parent_dir:
+        os.makedirs(parent_dir, exist_ok=True)
+
     if filename.endswith(".zst"):
         compressor = zstd.ZstdCompressor()
         compressed_data = compressor.compress(combined_data.encode("UTF-8"))
