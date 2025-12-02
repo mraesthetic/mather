@@ -13,15 +13,15 @@ if __name__ == "__main__":
 
     num_threads = 16
     rust_threads = 16
-    batching_size = 10000
+    batching_size = 5000
     compression = True
     profiling = False
 
     num_sim_args = {
-        "base": 20000,
-        "bonus_hunt": 20000,
-        "regular_buy": 20000,
-        "super_buy": 20000,
+        "base": 1000000,
+        "bonus_hunt": 1000000,
+        "regular_buy": 1000000,
+        "super_buy": 1000000,
     }
 
     run_conditions = {
