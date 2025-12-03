@@ -11,17 +11,17 @@ from src.write_data.write_configs import generate_configs
 
 if __name__ == "__main__":
 
-    num_threads = 16
-    rust_threads = 16
-    batching_size = 5000
+    num_threads = 8
+    rust_threads = 8
+    batching_size = 2500
     compression = True
     profiling = False
 
     num_sim_args = {
-        "base": 1000000,
-        "bonus_hunt": 1000000,
-        "regular_buy": 1000000,
-        "super_buy": 1000000,
+        "base": 100000,
+        "bonus_hunt": 100000,
+        "regular_buy": 100000,
+        "super_buy": 100000,
     }
 
     run_conditions = {
@@ -34,8 +34,7 @@ if __name__ == "__main__":
 
     config = GameConfig()
     gamestate = GameState(config)
-    if run_conditions["run_optimization"] or run_conditions["run_analysis"]:
-        optimization_setup_class = OptimizationSetup(config)
+    OptimizationSetup(config)
 
     if run_conditions["run_sims"]:
         create_books(

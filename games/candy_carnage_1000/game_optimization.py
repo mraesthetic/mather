@@ -1,5 +1,3 @@
-"""Set conditions/parameters for optimization program program"""
-
 from optimization_program.optimization_config import (
     ConstructScaling,
     ConstructParameters,
@@ -16,16 +14,16 @@ class OptimizationSetup:
         self.game_config = game_config
         self.game_config.opt_params = {
             "base": self._main_mode_setup(
-                base_rtp=0.60,
-                regular_fs_rtp=0.27,
-                super_fs_rtp=0.08,
-                zero_rtp=0.012,
+                base_rtp=0.466,
+                regular_fs_rtp=0.418,
+                super_fs_rtp=0.078,
+                zero_rtp=0.0,
             ),
             "bonus_hunt": self._main_mode_setup(
-                base_rtp=0.432,
-                regular_fs_rtp=0.45,
-                super_fs_rtp=0.08,
-                zero_rtp=0.0,
+                base_rtp=0.188,
+                regular_fs_rtp=0.540,
+                super_fs_rtp=0.111,
+                zero_rtp=0.123,
             ),
             "regular_buy": self._regular_buy_setup(),
             "super_buy": self._super_buy_setup(),
@@ -88,36 +86,34 @@ class OptimizationSetup:
     def _regular_buy_setup(self):
         return {
             "conditions": {
-                "wincap": ConstructConditions(rtp=0.0, av_win=25000, search_conditions=25000).return_dict(),
                 "regular_fs": ConstructConditions(
                     rtp=self.game_config.rtp,
                     hr="x",
-                    search_conditions={"feature_type": "regular"},
                 ).return_dict(),
-                },
-                "scaling": ConstructScaling(
-                    [
-                        {
+            },
+            "scaling": ConstructScaling(
+                [
+                    {
                         "criteria": "regular_fs",
                         "scale_factor": 1.1,
                         "win_range": (100, 500),
-                            "probability": 1.0,
+                        "probability": 1.0,
                     }
-                    ]
-                ).return_dict(),
-                "parameters": ConstructParameters(
+                ]
+            ).return_dict(),
+            "parameters": ConstructParameters(
                 num_show=1500,
                 num_per_fence=3000,
                 min_m2m=2,
                 max_m2m=5,
-                    pmb_rtp=1.0,
+                pmb_rtp=1.0,
                 sim_trials=1500,
                 test_spins=[25, 50, 100],
                 test_weights=[0.4, 0.4, 0.2],
-                    score_type="rtp",
+                score_type="rtp",
                 max_trial_dist=10,
-                ).return_dict(),
-                "distribution_bias": ConstructFenceBias(
+            ).return_dict(),
+            "distribution_bias": ConstructFenceBias(
                 applied_criteria=["regular_fs"],
                 bias_ranges=[(50, 5000)],
                 bias_weights=[0.2],
@@ -127,11 +123,9 @@ class OptimizationSetup:
     def _super_buy_setup(self):
         return {
             "conditions": {
-                "wincap": ConstructConditions(rtp=0.0, av_win=25000, search_conditions=25000).return_dict(),
                 "super_fs": ConstructConditions(
                     rtp=self.game_config.rtp,
                     hr="x",
-                    search_conditions={"feature_type": "super"},
                 ).return_dict(),
             },
             "scaling": ConstructScaling(
