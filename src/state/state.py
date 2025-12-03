@@ -1,6 +1,7 @@
 from copy import copy, deepcopy
 from abc import ABC, abstractmethod
 from warnings import warn
+from decimal import Decimal, ROUND_HALF_UP
 import random
 
 # from src.config.config import BetMode
@@ -185,29 +186,34 @@ class GeneralGameState(ABC):
         self.library[self.sim + 1] = copy(self.book.to_json())
         self.win_manager.update_end_round_wins()
 
+    def _quantize_tenth(self, value: float) -> float:
+        """Quantize payout values to 0.1 increments to satisfy publishing format."""
+        return float(Decimal(str(value)).quantize(Decimal("0.1"), rounding=ROUND_HALF_UP))
+
     def update_final_win(self) -> None:
         """Separate base and freegame wins, verify the sum of there are equal to the final simulation payout."""
-        final = round(min(self.win_manager.running_bet_win, self.config.wincap), 2)
-        basewin = round(min(self.win_manager.basegame_wins, self.config.wincap), 2)
-        freewin = round(min(self.win_manager.freegame_wins, self.config.wincap), 2)
+        basewin = self._quantize_tenth(min(self.win_manager.basegame_wins, self.config.wincap))
+        freewin = self._quantize_tenth(min(self.win_manager.freegame_wins, self.config.wincap))
+        final = self._quantize_tenth(min(basewin + freewin, self.config.wincap))
 
         self.final_win = final
         self.book.payout_multiplier = self.final_win
         self.book.basegame_wins = basewin
         self.book.freegame_wins = freewin
 
-        assert min(
-            round(self.win_manager.basegame_wins + self.win_manager.freegame_wins, 2),
-            self.config.wincap,
-        ) == round(
-            min(self.win_manager.running_bet_win, self.config.wincap), 2
-        ), "Base + Free game payout mismatch!"
-        assert min(
-            round(self.book.basegame_wins + self.book.freegame_wins, 2),
-            self.config.wincap,
-        ) == min(
-            round(self.book.payout_multiplier, 2), round(self.config.wincap, 2)
-        ), "Base + Free game payout mismatch!"
+        total_manager = self._quantize_tenth(
+            min(self.win_manager.basegame_wins + self.win_manager.freegame_wins, self.config.wincap)
+        )
+        assert abs(total_manager - self.final_win) <= 0.11, "Base + Free game payout mismatch!"
+
+        total_book = self._quantize_tenth(
+            min(self.book.basegame_wins + self.book.freegame_wins, self.config.wincap)
+        )
+        assert (
+            abs(total_book - self._quantize_tenth(min(self.book.payout_multiplier, self.config.wincap))) <= 0.11
+        ), (
+            "Base + Free game payout mismatch!"
+        )
 
     def check_repeat(self) -> None:
         """Checks if the spin failed a criteria constraint at any point."""

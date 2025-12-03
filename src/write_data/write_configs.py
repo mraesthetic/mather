@@ -15,8 +15,12 @@ from utils.analysis.distribution_functions import (
 
 def copy_and_rename_csv(filepath: str) -> None:
     """If no optimization has been run, initialise the lookup table."""
-    file_location = os.path.dirname(filepath)
-    new_filepath = os.path.join(file_location, os.path.splitext(os.path.basename(filepath))[0] + "_0.csv")
+    base_dir = os.path.dirname(filepath)  # .../lookup_tables
+    library_dir = os.path.dirname(base_dir)
+    publish_dir = os.path.join(library_dir, "publish_files")
+    os.makedirs(publish_dir, exist_ok=True)
+    basename = os.path.splitext(os.path.basename(filepath))[0]
+    new_filepath = os.path.join(publish_dir, f"{basename}_0.csv")
     shutil.copy(filepath, new_filepath)
 
 

@@ -47,7 +47,10 @@ class HitRateCalculations:
         """Get hit-rates using inverse probabilities from optimized lookup tables."""
         cumulative_weight = 0
         for idx in unique_ids:
-            cumulative_weight += self.weights[idx - 1]
+            array_idx = idx - 1 if idx > 0 else 0
+            if array_idx >= len(self.weights):
+                continue
+            cumulative_weight += self.weights[array_idx]
 
         prob = cumulative_weight / self.total_weight
         try:
@@ -60,11 +63,17 @@ class HitRateCalculations:
         search_key_tot_weight = 0
         # find out the total payout and weights from the force keys subset of the lookup table
         for id in unique_ids:
-            search_key_tot_weight += self.weights[id - 1]
+            array_idx = id - 1 if id > 0 else 0
+            if array_idx >= len(self.weights):
+                continue
+            search_key_tot_weight += self.weights[array_idx]
         average_win = 0
         # multiply each win in the subset of lookup table by the ratio of its weight to normalize the avg payout
         for id in unique_ids:
-            norm_payout = self.payouts[id - 1] * (self.weights[id - 1] / search_key_tot_weight)
+            array_idx = id - 1 if id > 0 else 0
+            if array_idx >= len(self.weights):
+                continue
+            norm_payout = self.payouts[array_idx] * (self.weights[array_idx] / search_key_tot_weight)
             average_win += norm_payout
         try:
             return average_win

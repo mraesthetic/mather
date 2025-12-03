@@ -14,21 +14,21 @@ if __name__ == "__main__":
     num_threads = 8
     rust_threads = 8
     batching_size = 2500
-    compression = True
+    compression = False
     profiling = False
 
     num_sim_args = {
-        "base": 100000,
-        "bonus_hunt": 100000,
-        "regular_buy": 100000,
-        "super_buy": 100000,
+        "base": 15000,
+        "bonus_hunt": 15000,
+        "regular_buy": 15000,
+        "super_buy": 15000,
     }
 
     run_conditions = {
         "run_sims": True,
-        "run_optimization": False,
-        "run_analysis": False,
-        "run_format_checks": False,
+        "run_optimization": True,
+        "run_analysis": True,
+        "run_format_checks": True,
     }
     target_modes = []
 

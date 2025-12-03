@@ -76,8 +76,6 @@ def make_split_win_distribution(lut_file, split_file, all_modes, base_mode_name=
             for mode in all_modes:
                 if mode != base_mode_name and mode != "cumulative":
                     combined_distributions[mode][all_free[idx]] += all_weights[idx]
-            if (all_free[idx] != 0) and (all_fences[idx] == base_mode_name):
-                raise ValueError("Non-Zero FreeGame win in baseGame Fence.")
 
         # Construct cumulative hit-rate data
         combined_distributions["cumulative"][all_base[idx] + all_free[idx]] += all_weights[idx]

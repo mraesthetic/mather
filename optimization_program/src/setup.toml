@@ -1,5 +1,5 @@
 num_show_pigs = 5000
-num_pigs_per_fence = 10000
+num_pigs_per_fence = 15000  # Increased for better RTP matching
 min_mean_to_median = 4.0
 max_mean_to_median = 8.0
 pmb_rtp = 1.0
@@ -10,7 +10,7 @@ score_type = "rtp"
 max_trial_dist = 15
 
 game_name = "candy_carnage_1000"
-bet_type = "regular_buy"  # change this per run: base | bonus_hunt | regular_buy | super_buy
+bet_type = "base"  # change this per run: base | bonus_hunt | regular_buy | super_buy
 path_to_games = "../games/"
 run_1000_batch = false
 threads_for_fence_construction = 20

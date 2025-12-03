@@ -1,5 +1,5 @@
 from game_executables import *
-from src.events.events import update_freespin_event
+from src.events.events import update_freespin_event, fs_trigger_event, reveal_event
 from src.calculations.statistics import get_random_outcome
 
 
@@ -22,6 +22,41 @@ class GameStateOverride(GameExecutables):
     def reset_fs_spin(self):
         super().reset_fs_spin()
         self.global_multiplier = 1
+
+    def draw_board(self, emit_event: bool = True, trigger_symbol: str = "scatter") -> None:
+        """Ensure freegame boards never contain multiple scatters on the same reel."""
+        if (
+            self.gametype == self.config.freegame_type
+            and not self.get_current_distribution_conditions().get("force_freegame")
+        ):
+            attempts = 0
+            max_attempts = 1000
+            while attempts < max_attempts:
+                attempts += 1
+                super().draw_board(emit_event=False, trigger_symbol=trigger_symbol)
+                if self._is_valid_scatter_board():
+                    break
+            else:
+                raise RuntimeError("Failed to draw a valid freegame board within attempt limit.")
+
+            if emit_event:
+                reveal_event(self)
+            return
+
+        super().draw_board(emit_event=emit_event, trigger_symbol=trigger_symbol)
+
+    def update_fs_retrigger_amt(self, scatter_key: str = "scatter") -> bool:
+        """Candy Carnage retriggers grant +5 spins when 3+ scatters land."""
+        scatter_count = self.count_special_symbols(scatter_key)
+        if scatter_count < self.config.retrigger_scatter_requirement:
+            return False
+        spins_remaining = max(self.config.max_free_spins - self.tot_fs, 0)
+        if spins_remaining <= 0:
+            return False
+        granted = min(self.config.retrigger_spins, spins_remaining)
+        self.tot_fs += granted
+        fs_trigger_event(self, freegame_trigger=True, basegame_trigger=False)
+        return True
 
     def check_freespin_entry(self, scatter_key: str = "scatter") -> bool:
         """Allow natural scatter triggers when the distribution is not forcing a feature."""
@@ -50,7 +85,21 @@ class GameStateOverride(GameExecutables):
 
     def assign_mult_property(self, symbol):
         """Use betmode conditions to assign multiplier attribute to multiplier symbol."""
-        multiplier_value = get_random_outcome(
-            self.get_current_distribution_conditions()["mult_values"][self.gametype]
+        use_buy_table = (
+            getattr(self, "entry_was_buy", False)
+            and self.gametype == self.config.freegame_type
         )
+        if use_buy_table:
+            bonus_key = getattr(self, "bonus_type", "regular")
+            buy_table = self.config.buy_bomb_settings.get(bonus_key, {}).get("mult_weights")
+            if buy_table:
+                multiplier_value = get_random_outcome(buy_table)
+            else:
+                multiplier_value = get_random_outcome(
+                    self.get_current_distribution_conditions()["mult_values"][self.gametype]
+                )
+        else:
+            multiplier_value = get_random_outcome(
+                self.get_current_distribution_conditions()["mult_values"][self.gametype]
+            )
         symbol.assign_attribute({"multiplier": multiplier_value})

@@ -14,16 +14,16 @@ class OptimizationSetup:
         self.game_config = game_config
         self.game_config.opt_params = {
             "base": self._main_mode_setup(
-                base_rtp=0.466,
-                regular_fs_rtp=0.418,
-                super_fs_rtp=0.078,
-                zero_rtp=0.0,
+                base_rtp=0.440,  # Reduced to account for optimization generating high RTP
+                regular_fs_rtp=0.400,  # Reduced to account for optimization generating high RTP
+                super_fs_rtp=0.072,  # Reduced to account for optimization generating high RTP
+                zero_rtp=0.050,  # Adjusted to keep sum = 0.962 (hr=0.0 so doesn't contribute)
             ),
             "bonus_hunt": self._main_mode_setup(
-                base_rtp=0.188,
-                regular_fs_rtp=0.540,
-                super_fs_rtp=0.111,
-                zero_rtp=0.123,
+                base_rtp=0.175,  # Reduced to account for optimization generating high RTP
+                regular_fs_rtp=0.510,  # Reduced to account for optimization generating high RTP
+                super_fs_rtp=0.105,  # Reduced to account for optimization generating high RTP
+                zero_rtp=0.172,  # Adjusted to keep sum = 0.962 (hr=0.0 so doesn't contribute)
             ),
             "regular_buy": self._regular_buy_setup(),
             "super_buy": self._super_buy_setup(),
@@ -52,25 +52,25 @@ class OptimizationSetup:
                     [
                         {
                         "criteria": "regular_fs",
-                        "scale_factor": 1.15,
+                        "scale_factor": 1.10,  # Reduced from 1.15 to lower RTP
                         "win_range": (100, 500),
                             "probability": 1.0,
                         },
                         {
                         "criteria": "super_fs",
-                        "scale_factor": 1.25,
+                        "scale_factor": 1.15,  # Reduced from 1.25 to lower RTP
                         "win_range": (500, 25000),
                             "probability": 1.0,
                         },
                     ]
                 ).return_dict(),
                 "parameters": ConstructParameters(
-                num_show=2500,
-                num_per_fence=5000,
+                num_show=3000,  # Increased for better distribution matching
+                num_per_fence=8000,  # Increased for better RTP convergence
                 min_m2m=3,
                 max_m2m=6,
                     pmb_rtp=1.0,
-                sim_trials=2500,
+                sim_trials=3000,  # Increased for better accuracy
                 test_spins=[50, 150, 300],
                 test_weights=[0.4, 0.4, 0.2],
                     score_type="rtp",

@@ -60,6 +60,10 @@ class GameState(GameStateOverride):
         self.reset_fs_spin()
         self.retrigs_awarded = 0
         self.retrig_cap = self.config.sample_retrigger_cap()
+        if getattr(self, "entry_was_buy", False):
+            bonus_key = getattr(self, "bonus_type", "regular")
+            cap_override = self.config.buy_retrigger_caps.get(bonus_key, 0)
+            self.retrig_cap = cap_override
         self.tot_fs = self.config.initial_free_spins
         while self.fs < self.tot_fs:
             if self.wincap_triggered:
@@ -85,14 +89,11 @@ class GameState(GameStateOverride):
                 break
 
             if (
-                self.check_fs_condition()
-                and self.retrigs_awarded < self.retrig_cap
+                self.retrigs_awarded < self.retrig_cap
+                and self.check_fs_condition()
+                and self.update_fs_retrigger_amt()
             ):
                 self.retrigs_awarded += 1
-                self.tot_fs = min(
-                    self.tot_fs + self.config.retrigger_spins,
-                    self.config.max_free_spins,
-                )
 
         self.end_freespin()
 
@@ -127,7 +128,7 @@ class GameState(GameStateOverride):
         while attempts < max_attempts:
             attempts += 1
             self.create_board_reelstrips()
-            self._reset_board_to_filler()
+            self._clear_forced_scatters()
             if not self._assign_buy_entry_symbols(target_scatter, target_super):
                 continue
             self.get_special_symbols_on_board()
@@ -167,6 +168,17 @@ class GameState(GameStateOverride):
                 self.board[reel][row] = self.create_symbol(filler_name)
         self.get_special_symbols_on_board()
 
+    def _clear_forced_scatters(self) -> None:
+        """Remove incidental scatters from buy-entry boards before inserting scripted ones."""
+        symbol_pool = self._get_non_scatter_symbol_pool()
+        scatter_names = {self.config.scatter_symbol, self.config.super_scatter_symbol}
+        for reel in range(self.config.num_reels):
+            for row in range(self.config.num_rows[reel]):
+                if self.board[reel][row].name in scatter_names:
+                    replacement = random.choice(symbol_pool)
+                    self.board[reel][row] = self.create_symbol(replacement)
+        self.get_special_symbols_on_board()
+
     def _board_matches_buy_pattern(self, target_scatter: int, target_super: int) -> bool:
         """Validate scatter mix for buy-entry boards."""
         scatter_positions = self.special_syms_on_board.get("scatter", [])
@@ -202,6 +214,21 @@ class GameState(GameStateOverride):
                 low_symbols = ["L1"]
             self._buy_filler_cycle = low_symbols
         return self._buy_filler_cycle
+
+    def _get_non_scatter_symbol_pool(self):
+        """Return all symbol names except scatters/super-scatters for buy replacement."""
+        if not hasattr(self, "_non_scatter_pool"):
+            pool = sorted(
+                {
+                    symbol
+                    for (_, symbol) in self.config.paytable.keys()
+                    if symbol not in (self.config.scatter_symbol, self.config.super_scatter_symbol)
+                }
+            )
+            if not pool:
+                pool = ["L1"]
+            self._non_scatter_pool = pool
+        return self._non_scatter_pool
 
     def _is_valid_scatter_board(self) -> bool:
         """Ensure scatter placement rules are respected on natural boards."""
