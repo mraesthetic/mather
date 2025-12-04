@@ -1,3 +1,5 @@
+import random
+
 from game_executables import *
 from src.events.events import update_freespin_event, fs_trigger_event, reveal_event
 from src.calculations.statistics import get_random_outcome
@@ -45,16 +47,17 @@ class GameStateOverride(GameExecutables):
 
         super().draw_board(emit_event=emit_event, trigger_symbol=trigger_symbol)
 
+    def tumble_board(self) -> None:
+        """Run the normal tumble logic, then scrub duplicate scatters per reel."""
+        super().tumble_board()
+        self._dedupe_scatter_columns()
+
     def update_fs_retrigger_amt(self, scatter_key: str = "scatter") -> bool:
         """Candy Carnage retriggers grant +5 spins when 3+ scatters land."""
         scatter_count = self.count_special_symbols(scatter_key)
         if scatter_count < self.config.retrigger_scatter_requirement:
             return False
-        spins_remaining = max(self.config.max_free_spins - self.tot_fs, 0)
-        if spins_remaining <= 0:
-            return False
-        granted = min(self.config.retrigger_spins, spins_remaining)
-        self.tot_fs += granted
+        self.tot_fs += self.config.retrigger_spins
         fs_trigger_event(self, freegame_trigger=True, basegame_trigger=False)
         return True
 
@@ -103,3 +106,24 @@ class GameStateOverride(GameExecutables):
                 self.get_current_distribution_conditions()["mult_values"][self.gametype]
             )
         symbol.assign_attribute({"multiplier": multiplier_value})
+
+    def _dedupe_scatter_columns(self) -> None:
+        """Replace any secondary scatters on a reel with non-scatter fillers."""
+        scatter_names = {self.config.scatter_symbol, self.config.super_scatter_symbol}
+        replacement_pool = self._get_non_scatter_symbol_pool()
+        reels_with_scatter = set()
+        replaced = False
+
+        for reel_idx in range(self.config.num_reels):
+            for row_idx, symbol in enumerate(self.board[reel_idx]):
+                if symbol.name not in scatter_names:
+                    continue
+                if reel_idx in reels_with_scatter:
+                    filler_name = random.choice(replacement_pool)
+                    self.board[reel_idx][row_idx] = self.create_symbol(filler_name)
+                    replaced = True
+                else:
+                    reels_with_scatter.add(reel_idx)
+
+        if replaced:
+            self.get_special_symbols_on_board()

@@ -59,11 +59,15 @@ class Executables(Conditions, Tumble):
 
     def run_freespin_from_base(self, scatter_key: str = "scatter") -> None:
         """Trigger the freespin function and update total fs amount."""
+        feature = getattr(self, "current_feature_type", None) or getattr(self, "pending_feature_type", None)
+        if feature is None:
+            feature = "regular"
         self.record(
             {
                 "kind": self.count_special_symbols(scatter_key),
                 "symbol": scatter_key,
-                "gametype": self.gametype,
+                "gametype": self.config.freegame_type,
+                "feature_type": feature,
             }
         )
         self.update_freespin_amount()

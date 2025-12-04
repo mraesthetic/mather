@@ -1,16 +1,15 @@
+use core::panic;
 use exes::IdentityCondition;
 use ndarray::{s, Array1};
 use rand::prelude::*;
 use rand::Rng;
 use rand_distr::{Distribution, WeightedIndex};
 use rayon::prelude::*;
-use core::panic;
 use std::hash::{Hash, Hasher};
 use std::mem;
-use std::path::{Path};
+use std::path::Path;
 use std::{
-    cmp::Ordering, collections::HashMap, fs, fs::File, io::BufWriter, io::Write,
-    time::Instant,
+    cmp::Ordering, collections::HashMap, fs, fs::File, io::BufWriter, io::Write, time::Instant,
 };
 
 mod setup;
@@ -19,7 +18,7 @@ use setup::SetupConfig;
 mod exes;
 use exes::{
     load_config_data, load_force_options, read_look_up_table, DressJson, FenceJson,
-    LookUpTableEntry, SearchResult
+    LookUpTableEntry, SearchResult,
 };
 
 use crate::exes::BiasJson;
@@ -30,7 +29,7 @@ fn main() {
     let now = Instant::now();
     let cont = fs::read_to_string("src/setup.toml").expect("cannot find setup file in src/");
     let config: SetupConfig = toml::from_str(&cont).expect("failed to parse setup file");
-    
+
     run_farm(
         &config.game_name,
         &config.bet_type,
@@ -72,13 +71,29 @@ fn run_farm(
 
     // LOAD IN FORCE OPTIONS AND CONFIG FILE
     let force_options = load_force_options(game_name, bet_type, path_to_games.to_string());
-    
+
     let config_file: exes::ConfigData;
     config_file = load_config_data(game_name, path_to_games.to_string());
-    let bet_mode_index = config_file.bet_modes.iter().position(|bm| bm.bet_mode == bet_type).expect("betmode index not found in betmode summary array");
-    let fence_index = config_file.fences.iter().position(|fi| fi.bet_mode == bet_type).expect("betmode not found in fences array");
-    let dress_index = config_file.dresses.iter().position(|di|di.bet_mode == bet_type).expect("betmode not found in dress array");
-    let bias_index = config_file.bias.iter().position(|bi| bi.bet_mode == bet_type).expect("betmode not found in bias array");
+    let bet_mode_index = config_file
+        .bet_modes
+        .iter()
+        .position(|bm| bm.bet_mode == bet_type)
+        .expect("betmode index not found in betmode summary array");
+    let fence_index = config_file
+        .fences
+        .iter()
+        .position(|fi| fi.bet_mode == bet_type)
+        .expect("betmode not found in fences array");
+    let dress_index = config_file
+        .dresses
+        .iter()
+        .position(|di| di.bet_mode == bet_type)
+        .expect("betmode not found in dress array");
+    let bias_index = config_file
+        .bias
+        .iter()
+        .position(|bi| bi.bet_mode == bet_type)
+        .expect("betmode not found in bias array");
 
     let mut lookup_table = match read_look_up_table(game_name, bet_type, path_to_games.to_string())
     {
@@ -89,6 +104,7 @@ fn run_farm(
         }
     };
     let init_lookup = lookup_table.clone();
+    let total_lookup_weight: f64 = init_lookup.values().map(|entry| entry.weight as f64).sum();
     // NOW WE WANT TO GET A VECTOR CONTAINING ALL THE SORTED WINS
     let mut sorted_wins: Vec<f64> = Vec::new();
     let bet_amount = config_file.bet_modes[bet_mode_index].cost;
@@ -114,6 +130,7 @@ fn run_farm(
         }
         println!("\nCreating {} Fence\n", fence.name);
         sort_wins_by_parameter(&mut fence, &force_options, &mut lookup_table);
+        log_fence_allocation(&mut fence, &init_lookup, total_lookup_weight);
 
         let bias_betmode: Vec<BiasJson> = config_file.bias[bias_index].bias.clone();
         let mut bias_fence: Option<BiasJson> = None;
@@ -123,7 +140,6 @@ fn run_farm(
                 break;
             }
         }
-
 
         if !fence.win_type {
             let mut win_range_params: Vec<&mut Dress> = Vec::new();
@@ -151,6 +167,8 @@ fn run_farm(
                 max_win: max_win,
                 min_win: min_win,
                 avg_win: fence.avg_win * bet_amount,
+                sample_ratio: fence.sample_ratio,
+                target_rtp: fence.rtp,
             };
             let thread_pool = rayon::ThreadPoolBuilder::new()
                 .num_threads(threads_for_fence_construction as usize)
@@ -179,14 +197,14 @@ fn run_farm(
             pig_pens.push(fence_pigs);
         } else {
             const EPSILON: f64 = 1e-9;
-            if !init_lookup.values().any(|entry| (entry.win - fence.avg_win).abs() < EPSILON) {
-                panic!(
-                    "fence.avg_win {} not found in lookup table",
-                    fence.avg_win
-                );
+            if !init_lookup
+                .values()
+                .any(|entry| (entry.win - fence.avg_win).abs() < EPSILON)
+            {
+                panic!("fence.avg_win {} not found in lookup table", fence.avg_win);
             }
-}           
-            sorted_wins.push(fence.avg_win);
+        }
+        sorted_wins.push(fence.avg_win);
     }
 
     sorted_wins.sort_by(|a, b| a.partial_cmp(&b).unwrap());
@@ -352,8 +370,12 @@ fn print_information(
                 for index in &sorted_indexes {
                     let entry = lookup_table.get(index).unwrap();
                     let rounded_win = (entry.win * 100.0).round(); //format!("{:.2}", entry.win);
-                    write!(file, "{},{},{}\n", entry.id, entry.weight, rounded_win as u64)
-                        .expect("Failed to write to file");
+                    write!(
+                        file,
+                        "{},{},{}\n",
+                        entry.id, entry.weight, rounded_win as u64
+                    )
+                    .expect("Failed to write to file");
                 }
             }
         }
@@ -380,7 +402,6 @@ fn print_information(
             }
         }
     });
-
 }
 
 fn get_win_ranges<T: std::io::Write>(
@@ -403,7 +424,7 @@ fn get_win_ranges<T: std::io::Write>(
         ((500.0, 1000.0), 0.0),
         ((1000.0, 2000.0), 0.0),
         ((2000.0, 3000.0), 0.0),
-        ((3000.0, 5001.0), 0.0)
+        ((3000.0, 5001.0), 0.0),
     ];
     for win_index in 0..sorted_wins.len() {
         for range_index in 0..win_ranges.len() {
@@ -583,7 +604,7 @@ fn create_show_pigs(
             if fence.win_type {
                 if let Some(index) = win_dist_index_map.get(&F64Wrapper(fence.avg_win)) {
                     weights[*index] += 1.0 / fence.hr;
-                } 
+                }
             } else {
                 if p == 0 {
                     random_weights_to_apply[non_win_type_count].push(vec![
@@ -676,13 +697,15 @@ fn sort_wins_by_parameter(
         };
 
         for key in keys_to_remove {
-            let entry = lookup_table.remove(&key);
-            if let Some(result) = entry {
+            if let Some(result) = lookup_table.get(&key) {
                 fence
                     .win_dist
                     .entry(F64Wrapper(result.win))
                     .or_insert(Vec::new())
                     .push(result.id);
+            }
+            if fence.name != "zero" {
+                lookup_table.remove(&key);
             }
         }
     } else {
@@ -733,6 +756,61 @@ fn sort_wins_by_parameter(
                 }
             }
         }
+    }
+}
+
+fn log_fence_allocation(
+    fence: &mut Fence,
+    lookup_snapshot: &HashMap<u32, LookUpTableEntry>,
+    total_lookup_weight: f64,
+) {
+    let mut total_weight = 0.0;
+    let mut weighted_win = 0.0;
+    let mut id_count = 0usize;
+    for ids in fence.win_dist.values() {
+        for book_id in ids {
+            if let Some(entry) = lookup_snapshot.get(book_id) {
+                let weight = entry.weight as f64;
+                total_weight += weight;
+                weighted_win += weight * entry.win;
+                id_count += 1;
+            }
+        }
+    }
+    let trigger_avg = if total_weight > 0.0 {
+        weighted_win / total_weight
+    } else {
+        0.0
+    };
+    fence.measured_weight = total_weight;
+    let natural_ratio = if total_lookup_weight > 0.0 {
+        total_weight / total_lookup_weight
+    } else {
+        0.0
+    };
+    let mut sample_ratio = natural_ratio;
+    if fence.hr > 0.0 {
+        sample_ratio = fence.hr;
+    } else if trigger_avg > 0.0 && fence.rtp > 0.0 {
+        sample_ratio = f64::min(1.0, fence.rtp / trigger_avg);
+    }
+    fence.sample_ratio = sample_ratio;
+    fence.measured_rtp = trigger_avg * sample_ratio;
+    println!(
+        "[Fence Stats] {} -> target_rtp={:.6} measured_rtp={:.6} trigger_avg={:.6} ids={} weight_sum={:.0}",
+        fence.name,
+        fence.rtp,
+        fence.measured_rtp,
+        trigger_avg,
+        id_count,
+        total_weight
+    );
+    let delta = fence.measured_rtp - fence.rtp;
+    if delta.abs() > 0.001 {
+        println!(
+            "  -> RTP delta {:+.6}; consider adjusting math_config or LUT before optimizing.",
+            delta
+        );
     }
 }
 
@@ -841,6 +919,9 @@ fn parse_fence_info(
         opposite_statement: false,
         min_mean_to_median: min_mean_to_median,
         max_mean_to_median: max_mean_to_median,
+        measured_rtp: 0.0,
+        measured_weight: 0.0,
+        sample_ratio: 0.0,
     };
 }
 pub struct Dress {
@@ -862,6 +943,9 @@ pub struct Fence {
     pub opposite_statement: bool,
     pub min_mean_to_median: f64,
     pub max_mean_to_median: f64,
+    pub measured_rtp: f64,
+    pub measured_weight: f64,
+    pub sample_ratio: f64,
 }
 pub struct PigHeaven<'a> {
     pub bet_amount: f64,
@@ -872,6 +956,8 @@ pub struct PigHeaven<'a> {
     pub max_win: f64,
     pub min_win: f64,
     pub avg_win: f64,
+    pub sample_ratio: f64,
+    pub target_rtp: f64,
 }
 #[derive(Clone)]
 pub struct Pig {
@@ -913,6 +999,8 @@ fn create_ancestors(
     let mut stds: Vec<f64> = Vec::with_capacity(max_trial_dist as usize);
     let mut already_printed = false;
     let mut bool_added_extra_parms = false;
+    let mut last_pos_estimate = 0.0;
+    let mut last_neg_estimate = 0.0;
 
     while (pos_pigs.len() as f64) < (pig_heaven.num_pigs as f64).sqrt()
         || (neg_pigs.len() as f64) < (pig_heaven.num_pigs as f64).sqrt()
@@ -1044,14 +1132,22 @@ fn create_ancestors(
         );
         new_pig.rtp += rtp;
         new_pig.sum_dist += sum_dist;
-        if new_pig.rtp > pig_heaven.avg_win
+        let trigger_avg = if new_pig.sum_dist > 0.0 {
+            new_pig.rtp / new_pig.sum_dist
+        } else {
+            0.0
+        };
+        let per_spin_estimate = trigger_avg * pig_heaven.sample_ratio;
+        if per_spin_estimate > pig_heaven.target_rtp
             && (pos_pigs.len() as f64) < (pig_heaven.num_pigs as f64).sqrt()
         {
             pos_pigs.push(new_pig);
-        } else if new_pig.rtp < pig_heaven.avg_win
+            last_pos_estimate = per_spin_estimate;
+        } else if per_spin_estimate < pig_heaven.target_rtp
             && (neg_pigs.len() as f64) < (pig_heaven.num_pigs as f64).sqrt()
         {
             neg_pigs.push(new_pig);
+            last_neg_estimate = per_spin_estimate;
         }
 
         if (pos_pigs.len() as f64) >= (pig_heaven.num_pigs as f64).sqrt() && !bool_added_extra_parms
@@ -1096,12 +1192,24 @@ fn create_ancestors(
         if loop_count > 5 * pig_heaven.num_pigs {
             if neg_pigs.len() > pos_pigs.len() {
                 if !already_printed {
-                    println!("RTP too low...");
+                    println!(
+                        "RTP too low... target_rtp={:.6}, per_spin_neg={:.6}, pos_count={}, neg_count={}",
+                        pig_heaven.target_rtp,
+                        last_neg_estimate,
+                        pos_pigs.len(),
+                        neg_pigs.len()
+                    );
                     already_printed = true;
                 }
             } else {
                 if !already_printed {
-                    println!("RTP too high...");
+                    println!(
+                        "RTP too high... target_rtp={:.6}, per_spin_pos={:.6}, pos_count={}, neg_count={}",
+                        pig_heaven.target_rtp,
+                        last_pos_estimate,
+                        pos_pigs.len(),
+                        neg_pigs.len()
+                    );
                     already_printed = true;
                 }
             }
@@ -1576,5 +1684,5 @@ impl Hash for F64Wrapper {
 
 struct ShowPig {
     pub pig_indexes: Vec<usize>,
-    pub success_score: f64
+    pub success_score: f64,
 }

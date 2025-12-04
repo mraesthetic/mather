@@ -1,5 +1,5 @@
 num_show_pigs = 5000
-num_pigs_per_fence = 15000  # Increased for better RTP matching
+num_pigs_per_fence = 200000  # MASSIVELY increased to 200k to find negative pigs
 min_mean_to_median = 4.0
 max_mean_to_median = 8.0
 pmb_rtp = 1.0

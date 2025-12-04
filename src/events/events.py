@@ -37,7 +37,7 @@ def reveal_event(gamestate):
         "index": len(gamestate.book.events),
         "type": EventConstants.REVEAL.value,
         "board": board_client,
-        "paddingPositions": gamestate.reel_positions,
+        "paddingPositions": [0] * gamestate.config.num_reels,
         "gameType": gamestate.gametype,
         "anticipation": gamestate.anticipation,
     }
@@ -54,8 +54,8 @@ def fs_trigger_event(
     assert basegame_trigger != freegame_trigger, "must set either basegame_trigger or freeSpinTrigger to = True"
     event = {}
     scatter_positions = []
-    for reel, _ in enumerate(gamestate.special_syms_on_board["scatter"]):
-        scatter_positions.append(gamestate.special_syms_on_board["scatter"][reel])
+    for pos in gamestate.special_syms_on_board["scatter"]:
+        scatter_positions.append({"reel": pos["reel"], "row": pos["row"]})
     if include_padding_index:
         for pos in scatter_positions:
             pos["row"] += 1
@@ -72,7 +72,6 @@ def fs_trigger_event(
             "index": len(gamestate.book.events),
             "type": EventConstants.FREESPINRETRIGGER.value,
             "totalFs": gamestate.tot_fs,
-            "positions": scatter_positions,
         }
 
     assert gamestate.tot_fs > 0, "total freegame (gamestate.tot_fs) must be >0"

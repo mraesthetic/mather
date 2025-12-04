@@ -2,11 +2,11 @@
 
 """
 
-from copy import copy
 from game_calculations import GameCalculations
 from src.calculations.scatter import Scatter
 from game_events import send_mult_info_event
 from src.events.events import (
+    win_info_event,
     set_win_event,
     set_total_event,
     fs_trigger_event,
@@ -22,27 +22,60 @@ class GameExecutables(GameCalculations):
 
     SCATTER_PAYOUTS = {5: 5.0, 6: 100.0}
 
+    def emit_tumble_win_events(self) -> None:
+        """Transmit win and new board information upon tumble."""
+        if self.win_data["totalWin"] <= 0:
+            return
+        win_event_index = len(self.book.events)
+        win_info_event(self)
+        update_tumble_win_event(self)
+        if self.gametype == self.config.freegame_type:
+            self._handle_board_multipliers(win_event_index)
+        self.evaluate_wincap()
+
+    def _handle_board_multipliers(self, win_event_index: int) -> None:
+        """Emit bomb events and update spin wins for freegame tumbles."""
+        board_mult, mult_info = self.get_board_multipliers()
+        if not mult_info:
+            return
+
+        base_tumble_win = self.win_manager.tumble_win
+        pre_multiplier_total = self.win_manager.spin_win - base_tumble_win
+        updated_win = base_tumble_win * board_mult
+        self.win_manager.set_spin_win(pre_multiplier_total + updated_win)
+        self.win_manager.tumble_win = updated_win
+
+        self._annotate_win_info_with_prebomb(win_event_index)
+        send_mult_info_event(
+            self,
+            board_mult,
+            mult_info,
+            base_tumble_win,
+            updated_win,
+        )
+        for pos in mult_info:
+            self.board[pos["reel"]][pos["row"]].assign_attribute({"explode": True})
+        update_tumble_win_event(self)
+
+    def _annotate_win_info_with_prebomb(self, event_index: int) -> None:
+        """Preserve pre-bomb win amounts for frontend animations."""
+        if event_index >= len(self.book.events):
+            return
+        event = self.book.events[event_index]
+        if event.get("type") != "winInfo":
+            return
+        for win in event.get("wins", []):
+            meta = win.setdefault("meta", {})
+            meta["winWithoutBombs"] = win["win"]
+
     def set_end_tumble_event(self):
         """Finalize tumble results."""
-        if self.gametype == self.config.freegame_type:
-            board_mult, mult_info = self.get_board_multipliers()
-            base_tumble_win = copy(self.win_manager.spin_win)
-            self.win_manager.set_spin_win(base_tumble_win * board_mult)
-            if self.win_manager.spin_win > 0 and mult_info:
-                send_mult_info_event(
-                    self,
-                    board_mult,
-                    mult_info,
-                    base_tumble_win,
-                    self.win_manager.spin_win,
-                )
-                for pos in mult_info:
-                    self.board[pos["reel"]][pos["row"]].assign_attribute({"explode": True})
-                update_tumble_win_event(self)
-
-        if self.win_manager.spin_win > 0:
-            set_win_event(self)
-        set_total_event(self)
+        if self.gametype == self.config.basegame_type:
+            if getattr(self, "entry_was_buy", False):
+                return
+            if self.win_manager.spin_win > 0:
+                set_win_event(self)
+            set_total_event(self)
 
     def update_freespin_amount(self, scatter_key: str = "scatter"):
         """Start every feature with a fixed number of spins."""
@@ -63,6 +96,50 @@ class GameExecutables(GameCalculations):
         self.win_data = Scatter.get_scatterpay_wins(
             self.config, self.board, global_multiplier=self.global_multiplier
         )  # Evaluate wins, self.board is modified in-place
+        if self.gametype == self.config.basegame_type:
+            scale = getattr(self.config, "basegame_win_scale", 1.0)
+            if scale != 1.0:
+                for win in self.win_data["wins"]:
+                    win["win"] *= scale
+                    if "meta" in win and "winWithoutMult" in win["meta"]:
+                        win["meta"]["winWithoutMult"] *= scale
+                self.win_data["totalWin"] *= scale
+        else:
+            scale = getattr(self.config, "freegame_win_scale", 1.0)
+            if scale != 1.0:
+                for win in self.win_data["wins"]:
+                    win["win"] *= scale
+                    if "meta" in win and "winWithoutMult" in win["meta"]:
+                        win["meta"]["winWithoutMult"] *= scale
+                self.win_data["totalWin"] *= scale
+            if not getattr(self, "entry_was_buy", False):
+                current_betmode = getattr(self, "betmode", "")
+                if current_betmode == "base":
+                    bonus_scale = getattr(self.config, "base_bonus_scale", 1.0)
+                    if bonus_scale != 1.0:
+                        for win in self.win_data["wins"]:
+                            win["win"] *= bonus_scale
+                            if "meta" in win and "winWithoutMult" in win["meta"]:
+                                win["meta"]["winWithoutMult"] *= bonus_scale
+                        self.win_data["totalWin"] *= bonus_scale
+                mode_scales = getattr(self.config, "mode_freegame_scales", {})
+                mode_scale = mode_scales.get(current_betmode, 1.0)
+                if mode_scale != 1.0:
+                    for win in self.win_data["wins"]:
+                        win["win"] *= mode_scale
+                        if "meta" in win and "winWithoutMult" in win["meta"]:
+                            win["meta"]["winWithoutMult"] *= mode_scale
+                    self.win_data["totalWin"] *= mode_scale
+            if getattr(self, "entry_was_buy", False):
+                bonus_key = getattr(self, "bonus_type", "regular")
+                bonus_scales = getattr(self.config, "buy_bonus_scales", {})
+                buy_scale = bonus_scales.get(bonus_key, 1.0)
+                if buy_scale != 1.0:
+                    for win in self.win_data["wins"]:
+                        win["win"] *= buy_scale
+                        if "meta" in win and "winWithoutMult" in win["meta"]:
+                            win["meta"]["winWithoutMult"] *= buy_scale
+                    self.win_data["totalWin"] *= buy_scale
         Scatter.record_scatter_wins(self)
         self.win_manager.tumble_win = self.win_data["totalWin"]
         self.win_manager.update_spinwin(self.win_data["totalWin"])  # Update wallet

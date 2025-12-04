@@ -58,12 +58,6 @@ class GameState(GameStateOverride):
 
     def run_freespin(self):
         self.reset_fs_spin()
-        self.retrigs_awarded = 0
-        self.retrig_cap = self.config.sample_retrigger_cap()
-        if getattr(self, "entry_was_buy", False):
-            bonus_key = getattr(self, "bonus_type", "regular")
-            cap_override = self.config.buy_retrigger_caps.get(bonus_key, 0)
-            self.retrig_cap = cap_override
         self.tot_fs = self.config.initial_free_spins
         while self.fs < self.tot_fs:
             if self.wincap_triggered:
@@ -88,12 +82,8 @@ class GameState(GameStateOverride):
             if self.wincap_triggered:
                 break
 
-            if (
-                self.retrigs_awarded < self.retrig_cap
-                and self.check_fs_condition()
-                and self.update_fs_retrigger_amt()
-            ):
-                self.retrigs_awarded += 1
+            if self.check_fs_condition() and self.update_fs_retrigger_amt():
+                continue
 
         self.end_freespin()
 

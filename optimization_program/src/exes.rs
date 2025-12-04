@@ -2,7 +2,7 @@ use csv::ReaderBuilder;
 use serde::{Deserialize, Serialize};
 use serde_json;
 use std::error::Error;
-use std::path::{Path};
+use std::path::Path;
 use std::{collections::HashMap, fs::File};
 
 ////////////////////////////////////
@@ -88,7 +88,6 @@ pub struct BiasJson {
     pub prob: f64,
 }
 
-
 #[derive(Debug, Deserialize, Serialize)]
 pub struct ConfigData {
     pub game_id: String,
@@ -168,10 +167,11 @@ pub(crate) fn read_look_up_table(
 
     for result in rdr.deserialize() {
         let record: LookUpTableInput = result?;
-        let record_float = LookUpTableEntry{
-            id: record.id, 
-            weight: record.weight, 
-            win: record.win as f64 / 100.0};
+        let record_float = LookUpTableEntry {
+            id: record.id,
+            weight: record.weight,
+            win: record.win as f64 / 100.0,
+        };
         lookup_table.insert(record.id, record_float);
     }
 

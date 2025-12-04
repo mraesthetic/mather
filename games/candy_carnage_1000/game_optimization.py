@@ -14,16 +14,20 @@ class OptimizationSetup:
         self.game_config = game_config
         self.game_config.opt_params = {
             "base": self._main_mode_setup(
-                base_rtp=0.440,  # Reduced to account for optimization generating high RTP
-                regular_fs_rtp=0.400,  # Reduced to account for optimization generating high RTP
-                super_fs_rtp=0.072,  # Reduced to account for optimization generating high RTP
-                zero_rtp=0.050,  # Adjusted to keep sum = 0.962 (hr=0.0 so doesn't contribute)
+                base_rtp=0.60,  # Target 60% of RTP from base spins
+                regular_fs_rtp=0.34,  # Target 34% from regular FS
+                super_fs_rtp=0.022,  # Target 2.2% from super FS
+                zero_rtp=0.0,
+                regular_hr=1 / 190,
+                super_hr=1 / 1500,
             ),
             "bonus_hunt": self._main_mode_setup(
-                base_rtp=0.175,  # Reduced to account for optimization generating high RTP
-                regular_fs_rtp=0.510,  # Reduced to account for optimization generating high RTP
-                super_fs_rtp=0.105,  # Reduced to account for optimization generating high RTP
-                zero_rtp=0.172,  # Adjusted to keep sum = 0.962 (hr=0.0 so doesn't contribute)
+                base_rtp=0.30,  # Target 30% of RTP from base spins
+                regular_fs_rtp=0.60,  # Target 60% from regular FS
+                super_fs_rtp=0.062,  # Target 6.2% from super FS
+                zero_rtp=0.0,
+                regular_hr=1 / 70,
+                super_hr=1 / 900,
             ),
             "regular_buy": self._regular_buy_setup(),
             "super_buy": self._super_buy_setup(),
@@ -31,23 +35,44 @@ class OptimizationSetup:
 
         verify_optimization_input(self.game_config, self.game_config.opt_params)
 
-    def _main_mode_setup(self, base_rtp: float, regular_fs_rtp: float, super_fs_rtp: float, zero_rtp: float):
+    def _main_mode_setup(
+        self,
+        base_rtp: float,
+        regular_fs_rtp: float,
+        super_fs_rtp: float,
+        zero_rtp: float,
+        regular_hr: float,
+        super_hr: float,
+    ):
+        conditions = {}
+        conditions["wincap"] = ConstructConditions(
+            rtp=0.0,
+            av_win=25000,
+            search_conditions=25000,
+        ).return_dict()
+
+        conditions["regular_fs"] = ConstructConditions(
+            rtp=regular_fs_rtp,
+            hr=regular_hr,
+            search_conditions={"gametype": "freegame"},
+        ).return_dict()
+
+        conditions["super_fs"] = ConstructConditions(
+            rtp=super_fs_rtp,
+            hr=super_hr,
+            search_conditions={"gametype": "freegame"},
+        ).return_dict()
+
+        conditions["basegame"] = ConstructConditions(
+            rtp=base_rtp,
+            hr=0.35,
+        ).return_dict()
+
+        if zero_rtp > 0:
+            conditions["zero"] = ConstructConditions(rtp=zero_rtp, hr=1.0).return_dict()
+
         return {
-                "conditions": {
-                "wincap": ConstructConditions(rtp=0.0, av_win=25000, search_conditions=25000).return_dict(),
-                "zero": ConstructConditions(rtp=zero_rtp, hr=0.0).return_dict(),
-                "basegame": ConstructConditions(rtp=base_rtp, hr=0.35).return_dict(),
-                "regular_fs": ConstructConditions(
-                    rtp=regular_fs_rtp,
-                    hr="x",
-                    search_conditions={"feature_type": "regular"},
-                ).return_dict(),
-                "super_fs": ConstructConditions(
-                    rtp=super_fs_rtp,
-                    hr="x",
-                    search_conditions={"feature_type": "super"},
-                    ).return_dict(),
-                },
+                "conditions": conditions,
                 "scaling": ConstructScaling(
                     [
                         {

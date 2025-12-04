@@ -1,5 +1,4 @@
 import os
-import random
 from src.config.config import Config
 from src.config.distributions import Distribution
 from src.config.betmode import BetMode
@@ -25,6 +24,34 @@ class GameConfig(Config):
         self.win_type = "scatter"
         self.rtp = 0.9620
         self.construct_paths()
+        self.win_levels = {
+            "standard": {
+                0: (0.0, 2.0),
+                1: (2.0, 5.0),
+                2: (5.0, 10.0),
+                3: (10.0, 15.0),
+                4: (15.0, 20.0),
+                5: (20.0, 20.0),  # Reserved / unused
+                6: (20.0, 50.0),
+                7: (50.0, 100.0),
+                8: (100.0, 250.0),
+                9: (250.0, 1000.0),
+                10: (1000.0, float("inf")),
+            },
+            "endFeature": {
+                0: (0.0, 2.0),
+                1: (2.0, 5.0),
+                2: (5.0, 10.0),
+                3: (10.0, 15.0),
+                4: (15.0, 20.0),
+                5: (20.0, 20.0),
+                6: (20.0, 50.0),
+                7: (50.0, 100.0),
+                8: (100.0, 250.0),
+                9: (250.0, 1000.0),
+                10: (1000.0, float("inf")),
+            },
+        }
 
         # Game Dimensions
         self.num_reels = 6
@@ -67,107 +94,129 @@ class GameConfig(Config):
         self.initial_free_spins = 10
         self.retrigger_spins = 5
         self.retrigger_scatter_requirement = 3
-        self.max_free_spins = 20
         self.super_scatter_upgrade_requirement = 3
-        self.buy_retrigger_caps = {"regular": 1, "super": 0}
-        # Probability thresholds for retrigger caps (CDF order)
-        self.retrigger_distribution = [
-            (0, 0.75),
-            (1, 0.95),
-            (2, 0.995),
-            (3, 0.999),
-            (4, 1.0),
-        ]
         self.scatter_symbol = "S"
         self.super_scatter_symbol = "BS"
+        self.basegame_win_scale = 0.313
+        self.freegame_win_scale = 8.0
+        self.buy_bonus_scales = {
+            "regular": 0.71,
+            "super": 1.26,
+        }
+        self.base_bonus_scale = 2.78
+        self.mode_freegame_scales = {
+            "bonus_hunt": 1.05,
+        }
         self.special_symbols = {
-            "wild": ["W"],
+            "wild": [],
             "scatter": [self.scatter_symbol],
             "super_scatter": [self.super_scatter_symbol],
             "bomb": ["M"],
         }
         self.bomb_settings = {
             "regular": {
-                "appearance_chance": 0.46,
-                "count_weights": {1: 77, 2: 19, 3: 4},
+                "appearance_chance": 0.55,
+                "count_weights": {1: 55, 2: 30, 3: 12, 4: 3},
                 "mult_weights": {
-                    2: 260,
-                    3: 180,
-                    4: 140,
-                    5: 110,
-                    6: 85,
-                    8: 65,
-                    10: 52,
-                    12: 42,
-                    15: 35,
-                    20: 26,
-                    25: 15,
-                    50: 8,
-                    100: 3,
-                    500: 0.5,
-                    1000: 0.1,
+                    2: 160,
+                    3: 150,
+                    4: 120,
+                    5: 100,
+                    6: 80,
+                    8: 60,
+                    10: 50,
+                    12: 35,
+                    15: 25,
+                    20: 18,
+                    25: 12,
+                    50: 5,
+                    100: 2,
+                    500: 1,
+                    1000: 1,
                 },
             },
             "super": {
-                "appearance_chance": 0.52,
-                "count_weights": {1: 58, 2: 28, 3: 11, 4: 3},
+                "appearance_chance": 0.45,
+                "count_weights": {1: 60, 2: 25, 3: 10, 4: 4, 5: 1},
                 "mult_weights": {
-                    20: 200,
-                    25: 160,
-                    50: 110,
-                    100: 50,
-                    500: 10,
-                    1000: 2,
+                    20: 260,
+                    25: 220,
+                    50: 30,
+                    100: 5,
+                    500: 1,
+                    1000: 1,
                 },
             },
         }
 
         self.buy_bomb_settings = {
             "regular": {
-                "appearance_chance": 0.92,
-                "count_weights": {1: 45, 2: 35, 3: 15, 4: 5},
+                "appearance_chance": 0.65,
+                "count_weights": {1: 45, 2: 30, 3: 20, 4: 5},
                 "mult_weights": {
-                    2: 80,
+                    2: 90,
                     3: 85,
-                    4: 90,
-                    5: 95,
-                    6: 95,
-                    8: 95,
-                    10: 90,
-                    12: 85,
-                    15: 80,
-                    20: 75,
-                    25: 65,
-                    50: 55,
-                    100: 30,
-                    500: 15,
-                    1000: 5,
+                    4: 80,
+                    5: 70,
+                    6: 60,
+                    8: 55,
+                    10: 45,
+                    12: 35,
+                    15: 25,
+                    20: 18,
+                    25: 12,
+                    50: 8,
+                    100: 4,
+                    500: 1,
+                    1000: 1,
                 },
             },
             "super": {
-                "appearance_chance": 0.8,
-                "count_weights": {1: 45, 2: 35, 3: 15, 4: 5},
+                "appearance_chance": 0.5,
+                "count_weights": {1: 50, 2: 30, 3: 12, 4: 6, 5: 2},
                 "mult_weights": {
-                    20: 95,
-                    25: 80,
-                    50: 55,
-                    100: 35,
-                    500: 10,
-                    1000: 3,
+                    20: 150,
+                    25: 130,
+                    50: 25,
+                    100: 6,
+                    500: 2,
+                    1000: 1,
                 },
             },
         }
 
+        self.regular_bonus_mults = {
+            2: 320,
+            3: 260,
+            4: 210,
+            5: 160,
+            6: 120,
+            8: 90,
+            10: 65,
+            12: 40,
+            15: 25,
+            20: 15,
+            25: 10,
+            50: 4,
+            100: 1,
+            500: 1,
+            1000: 1,
+        }
+        self.super_bonus_mults = {
+            20: 260,
+            25: 200,
+            50: 20,
+            100: 3,
+            500: 1,
+            1000: 1,
+        }
+
         self.freespin_triggers = {
             self.basegame_type: {
-                3: 8,
-                4: 12,
-                5: 15,
-                6: 17,
-                7: 19,
-                8: 21,
-                9: 23,
-                10: 24,
+                3: self.initial_free_spins,
+                4: self.initial_free_spins,
+                5: self.initial_free_spins,
+                6: self.initial_free_spins,
             },
             self.freegame_type: {
                 3: self.retrigger_spins,
@@ -197,35 +246,36 @@ class GameConfig(Config):
 
         self.padding_reels[self.basegame_type] = self.reels["BR0"]
         self.padding_reels[self.freegame_type] = self.reels["FR0"]
+        optimizer_mode = os.environ.get("OPTIMIZER_MODE") == "1"
+        if optimizer_mode:
+            base_profile = {"zero": 0.0, "base": 0.60, "reg": 0.34, "super": 0.022}
+            hunt_profile = {"zero": 0.0, "base": 0.30, "reg": 0.60, "super": 0.062}
+        else:
+            base_profile = {"zero": 0.0, "base": 1.0, "reg": 0.0, "super": 0.0}
+            hunt_profile = {"zero": 0.0, "base": 1.0, "reg": 0.0, "super": 0.0}
+
         self.bet_modes = [
             self._build_main_mode(
                 "base",
                 reel_id="BR0",
-                zero_quota=0.40,
-                base_quota=0.03,
-                reg_quota=0.003,
-                super_quota=0.0005,
+                zero_quota=base_profile["zero"],
+                base_quota=base_profile["base"],
+                reg_quota=base_profile["reg"],
+                super_quota=base_profile["super"],
                 cost=1.0,
             ),
             self._build_main_mode(
                 "bonus_hunt",
                 reel_id="BR_HUNT",
-                zero_quota=0.3,
-                base_quota=0.25,
-                reg_quota=0.035,
-                super_quota=0.0005,
+                zero_quota=hunt_profile["zero"],
+                base_quota=hunt_profile["base"],
+                reg_quota=hunt_profile["reg"],
+                super_quota=hunt_profile["super"],
                 cost=3.0,
             ),
             self._build_regular_buy_mode(),
             self._build_super_buy_mode(),
         ]
-
-    def sample_retrigger_cap(self) -> int:
-        roll = random.random()
-        for cap, threshold in self.retrigger_distribution:
-            if roll <= threshold:
-                return cap
-        return 0
 
     def _build_main_mode(
         self,
@@ -278,7 +328,14 @@ class GameConfig(Config):
                         "scatter_triggers": {4: 10, 5: 5, 6: 1},
                         "mult_values": {
                             self.basegame_type: {2: 100, 3: 80, 4: 50, 5: 20, 10: 10},
-                            self.freegame_type: {20: 40, 25: 60, 50: 110, 100: 90, 500: 25, 1000: 10},
+                            self.freegame_type: {
+                                20: 210,
+                                25: 130,
+                                50: 70,
+                                100: 30,
+                                500: 5,
+                                1000: 1,
+                            },
                         },
                     },
                 )
@@ -300,40 +357,60 @@ class GameConfig(Config):
                             self.basegame_type: {2: 100, 3: 80, 4: 50, 5: 20, 10: 10},
                             self.freegame_type: {
                                 2: 320,
-                                3: 260,
-                                4: 200,
-                                5: 150,
-                                6: 120,
-                                8: 80,
-                                10: 45,
-                                12: 25,
-                                15: 15,
-                                20: 10,
+                                3: 240,
+                                4: 170,
+                                5: 120,
+                                6: 90,
+                                8: 60,
+                                10: 35,
+                                12: 20,
+                                15: 12,
+                                20: 8,
                                 25: 5,
-                                50: 2,
+                                50: 3,
+                                100: 2,
+                                500: 1,
+                                1000: 1,
                             },
                         },
                     },
                 )
             )
-        dists.append(
-            Distribution(
-                criteria="zero",
-                quota=zero_quota,
-                win_criteria=0.0,
-                conditions={
-                    "reel_weights": {
-                        self.basegame_type: {reel_id: 1},
-                        self.freegame_type: {"FR0": 1},
+        if zero_quota > 0:
+            dists.append(
+                Distribution(
+                    criteria="zero",
+                    quota=zero_quota,
+                    win_criteria=0.0,
+                    conditions={
+                        "reel_weights": {
+                            self.basegame_type: {reel_id: 1},
+                            self.freegame_type: {"FR0": 1},
+                        },
+                        "mult_values": {
+                            self.basegame_type: {2: 100, 3: 80, 4: 50, 5: 20, 10: 10},
+                            self.freegame_type: {
+                                2: 320,
+                                3: 240,
+                                4: 170,
+                                5: 120,
+                                6: 90,
+                                8: 60,
+                                10: 35,
+                                12: 20,
+                                15: 12,
+                                20: 8,
+                                25: 5,
+                                50: 3,
+                                100: 2,
+                                500: 1,
+                                1000: 1,
+                            },
+                        },
+                        "force_freegame": False,
                     },
-                    "mult_values": {
-                        self.basegame_type: {2: 100, 3: 80, 4: 50, 5: 20, 10: 10},
-                        self.freegame_type: {2: 60, 3: 55, 4: 50, 5: 45, 6: 40, 8: 35, 10: 80, 12: 75, 15: 70, 20: 60, 25: 50, 50: 35, 100: 15, 500: 3, 1000: 1},
-                    },
-                    "force_freegame": False,
-                },
+                )
             )
-        )
         dists.append(
             Distribution(
                 criteria="basegame",
@@ -345,7 +422,23 @@ class GameConfig(Config):
                     },
                     "mult_values": {
                         self.basegame_type: {2: 100, 3: 80, 4: 50, 5: 20, 10: 10},
-                        self.freegame_type: {2: 60, 3: 55, 4: 50, 5: 45, 6: 40, 8: 35, 10: 80, 12: 75, 15: 70, 20: 60, 25: 50, 50: 35, 100: 15, 500: 3, 1000: 1},
+                        self.freegame_type: {
+                            2: 320,
+                            3: 240,
+                            4: 170,
+                            5: 120,
+                            6: 90,
+                            8: 60,
+                            10: 35,
+                            12: 20,
+                            15: 12,
+                            20: 8,
+                            25: 5,
+                            50: 3,
+                            100: 2,
+                            500: 1,
+                            1000: 1,
+                        },
                     },
                     "force_freegame": False,
                 },
